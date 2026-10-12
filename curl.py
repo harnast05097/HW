@@ -1,5 +1,3 @@
-#!/usr/bin/env python3
-
 import re
 import subprocess
 import tempfile
@@ -56,22 +54,15 @@ def curl_request(url, method="GET", cookies=None, headers=None, params=None,
             command.extend(["--data", ""])
 
         response_file = Path(temp_dir) / "response.html"
-        command.extend(["-o", str(response_file), "-w", "%{url_effective}", url])
-
-        result = subprocess.run(command, capture_output=True)
-        if result.returncode:
-            error = result.stderr.decode("utf-8", errors="replace")
-            raise RuntimeError(f"curl завершился с ошибкой: {error}")
-
-        return (
-            response_file.read_text(encoding="utf-8"),
-            result.stdout.decode("utf-8", errors="replace"),
-        )
+        command.extend(["-o", str(response_file), url])
+        subprocess.run(command, check=True)
+        return response_file.read_text(encoding="utf-8")
 
 
 def main():
     step = 1
-    response_text, response_url = curl_request(BASE_URL, cookies={"user": TOKEN})
+    response_url = BASE_URL
+    response_text = curl_request(response_url, cookies={"user": TOKEN})
 
     while True:
         soup = bs4.BeautifulSoup(response_text, "html.parser")
@@ -141,11 +132,12 @@ def main():
             print(f"[GET] {target_url}")
             request_data = {}
 
-        response_text, response_url = curl_request(
+        response_text = curl_request(
             target_url, "POST" if is_post else "GET", request_cookies,
             extra_headers, query_params, **request_data
         )
 
+        response_url = target_url
         step += 1
 
 
